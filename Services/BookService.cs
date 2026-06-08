@@ -9,9 +9,14 @@ public class BookService : IBookService
     private readonly string _filePath;
     private readonly string _templatePath;
     private readonly object _lock = new();
+    private readonly ILogger<BookService> _logger;
 
-    public BookService(IConfiguration configuration, IWebHostEnvironment env)
+    public BookService(IConfiguration configuration,
+                       IWebHostEnvironment env,
+                       ILogger<BookStoreApi.Services.BookService> logger)
     {
+        _logger = logger;
+
         _filePath = Path.Combine(env.ContentRootPath, configuration["BooksFilePath"]!);
         _templatePath = Path.Combine(env.ContentRootPath, configuration["BookReportHtmlTemplatePath"]!);
     }
@@ -19,16 +24,24 @@ public class BookService : IBookService
     public List<Book> GetAll()
     {
         var doc = LoadXml();
-
-        return doc.Descendants("book")
+        var result = doc.Descendants("book")
             .Select(MapToBook)
             .ToList();
+
+        _logger.LogInformation("GetAll completed. Count={Count}", result.Count);
+        return result;
     }
 
     public Book? GetByIsbn(string isbn)
     {
-        return GetAll()
-            .FirstOrDefault(x => x.Isbn == isbn);
+        var book = GetAll().FirstOrDefault(x => x.Isbn == isbn);
+
+        if (book == null)
+            _logger.LogWarning("Book not found. Isbn={Isbn}", isbn);
+        else
+            _logger.LogInformation("Book found. Isbn={Isbn}", isbn);
+
+        return book;
     }
 
     public void Add(Book book)
@@ -38,15 +51,17 @@ public class BookService : IBookService
         lock (_lock)
         {
             var doc = LoadXml();
-
             if (doc.Descendants("book")
                 .Any(b => b.Element("isbn")?.Value == book.Isbn))
+            {
+                _logger.LogWarning("Duplicate ISBN detected. Isbn={Isbn}", book.Isbn);
                 throw new Exception("Book already exists");
+            }
 
-            var newBook = BuildXml(book);
-
-            doc.Root!.Add(newBook);
+            doc.Root!.Add(BuildXml(book));
             doc.Save(_filePath);
+
+            _logger.LogInformation("Add completed. Isbn={Isbn}", book.Isbn);
         }
     }
 
@@ -60,7 +75,10 @@ public class BookService : IBookService
                 .FirstOrDefault(b => b.Element("isbn")?.Value == isbn);
 
             if (book == null)
+            {
+                _logger.LogWarning("Update failed - not found. Isbn={Isbn}", isbn);
                 throw new Exception("Book not found");
+            }
 
             if (!string.IsNullOrWhiteSpace(updated.Title))
                 book.Element("title")?.SetValue(updated.Title);
@@ -88,6 +106,8 @@ public class BookService : IBookService
                 book.SetAttributeValue("cover", updated.Cover);
 
             doc.Save(_filePath);
+
+            _logger.LogInformation("Update completed. Isbn={Isbn}", isbn);
         }
     }
 
@@ -101,11 +121,15 @@ public class BookService : IBookService
                 .FirstOrDefault(x => x.Element("isbn")?.Value == isbn);
 
             if (book == null)
+            {
+                _logger.LogWarning("Delete failed - not found. Isbn={Isbn}", isbn);
                 throw new Exception("Book not found");
+            }
 
             book.Remove();
-
             doc.Save(_filePath);
+
+            _logger.LogInformation("Delete completed. Isbn={Isbn}", isbn);
         }
     }
 
@@ -114,7 +138,10 @@ public class BookService : IBookService
         var books = GetAll();
 
         if (!File.Exists(_templatePath))
+        {
+            _logger.LogError("Template file not found. Path={Path}", _templatePath);
             throw new FileNotFoundException("HTML template not found", _templatePath);
+        }
 
         var template = File.ReadAllText(_templatePath);
 
@@ -131,16 +158,20 @@ public class BookService : IBookService
                     <td>{b.Year}</td>
                     <td>{b.Price}</td>
                 </tr>");
-                        }
+        }
+
+        _logger.LogInformation("GenerateHtmlReport completed. Count={Count}", books.Count);
 
         return template.Replace("{{ROWS}}", rows.ToString());
     }
 
- 
     private XDocument LoadXml()
     {
         if (!File.Exists(_filePath))
+        {
+            _logger.LogError("XML file not found. Path={Path}", _filePath);
             throw new FileNotFoundException("XML file not found", _filePath);
+        }
 
         return XDocument.Load(_filePath);
     }
@@ -184,28 +215,52 @@ public class BookService : IBookService
     private void ValidateBook(Book book)
     {
         if (book == null)
+        {
+            _logger.LogError("Validation failed - book is null");
             throw new ArgumentNullException(nameof(book));
+        }
 
         if (string.IsNullOrWhiteSpace(book.Isbn))
+        {
+            _logger.LogWarning("Validation failed - missing ISBN");
             throw new ArgumentException("ISBN is required");
+        }
 
         if (string.IsNullOrWhiteSpace(book.Title))
+        {
+            _logger.LogWarning("Validation failed - missing Title");
             throw new ArgumentException("Title is required");
+        }
 
         if (string.IsNullOrWhiteSpace(book.Category))
+        {
+            _logger.LogWarning("Validation failed - missing Category");
             throw new ArgumentException("Category is required");
+        }
 
         if (book.Year <= 0)
+        {
+            _logger.LogWarning("Validation failed - invalid Year");
             throw new ArgumentException("Year must be greater than 0");
+        }
 
         if (book.Price <= 0)
+        {
+            _logger.LogWarning("Validation failed - invalid Price");
             throw new ArgumentException("Price must be greater than 0");
+        }
 
         if (book.Authors == null || !book.Authors.Any())
+        {
+            _logger.LogWarning("Validation failed - missing Authors");
             throw new ArgumentException("At least one author is required");
+        }
 
         if (book.Authors.Any(a => string.IsNullOrWhiteSpace(a)))
+        {
+            _logger.LogWarning("Validation failed - empty author detected");
             throw new ArgumentException("Author name cannot be empty");
+        }
 
         if (string.IsNullOrWhiteSpace(book.Language))
             book.Language = "en";
