@@ -17,7 +17,7 @@ public class BooksController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("get-all")]
+    [HttpGet("getAll")]
     public async Task<IActionResult> GetAll()
     {
         var result = await _service.GetAll();
@@ -27,7 +27,7 @@ public class BooksController : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("get-by-isbn/{isbn}")]
+    [HttpGet("getByIsbn/{isbn}")]
     public async Task<IActionResult> GetByIsbn(string isbn)
     {
         var book = await _service.GetByIsbn(isbn);

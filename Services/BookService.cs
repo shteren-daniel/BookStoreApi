@@ -39,9 +39,6 @@ public class BookService : IBookService
 
     public async Task<Book?> GetByIsbn(string isbn)
     {
-        if (string.IsNullOrWhiteSpace(isbn))
-            throw new ArgumentException("ISBN is required");
-
         var result = await _repo.GetByIsbnAsync(isbn);
 
         if (result == null)
@@ -52,7 +49,6 @@ public class BookService : IBookService
 
     public async Task Add(CreateBookDto dto)
     {
-        // validation handled by FluentValidation pipeline
 
         var book = Map(dto);
 
@@ -63,9 +59,6 @@ public class BookService : IBookService
 
     public async Task Update(string isbn, UpdateBookDto dto)
     {
-        if (string.IsNullOrWhiteSpace(isbn))
-            throw new ArgumentException("ISBN is required");
-
         var existing = await _repo.GetByIsbnAsync(isbn);
 
         if (existing == null)
@@ -80,9 +73,6 @@ public class BookService : IBookService
 
     public async Task Delete(string isbn)
     {
-        if (string.IsNullOrWhiteSpace(isbn))
-            throw new ArgumentException("ISBN is required");
-
         await _repo.DeleteAsync(isbn);
 
         _logger.LogInformation("Delete completed. ISBN={Isbn}", isbn);
