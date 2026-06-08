@@ -35,7 +35,10 @@ public class BookRepository : IBookRepository
 
             if (doc.Descendants("book")
                 .Any(b => b.Element("isbn")?.Value == book.Isbn))
-                throw new Exception("Book already exists");
+            {
+                throw new InvalidOperationException(
+                    $"Book with ISBN '{book.Isbn}' already exists");
+            }
 
             doc.Root!.Add(BuildXml(book));
             doc.Save(_filePath);
@@ -52,7 +55,10 @@ public class BookRepository : IBookRepository
                 .FirstOrDefault(b => b.Element("isbn")?.Value == isbn);
 
             if (existing == null)
-                throw new Exception("Book not found");
+            {
+                throw new KeyNotFoundException(
+                    $"Book with ISBN '{isbn}' was not found");
+            }
 
             existing.Remove();
             doc.Root!.Add(BuildXml(updated));
@@ -71,7 +77,10 @@ public class BookRepository : IBookRepository
                 .FirstOrDefault(x => x.Element("isbn")?.Value == isbn);
 
             if (book == null)
-                throw new Exception("Book not found");
+            {
+                throw new KeyNotFoundException(
+                    $"Book with ISBN '{isbn}' was not found");
+            }
 
             book.Remove();
 
@@ -84,7 +93,11 @@ public class BookRepository : IBookRepository
     private XDocument LoadXml()
     {
         if (!File.Exists(_filePath))
-            throw new FileNotFoundException("XML file not found", _filePath);
+        {
+            throw new FileNotFoundException(
+                "XML file not found",
+                _filePath);
+        }
 
         return XDocument.Load(_filePath);
     }
@@ -121,7 +134,9 @@ public class BookRepository : IBookRepository
             Cover = x.Attribute("cover")?.Value,
             Year = int.Parse(x.Element("year")?.Value ?? "0"),
             Price = decimal.Parse(x.Element("price")?.Value ?? "0"),
-            Authors = x.Elements("author").Select(a => a.Value).ToList()
+            Authors = x.Elements("author")
+                .Select(a => a.Value)
+                .ToList()
         };
     }
 }

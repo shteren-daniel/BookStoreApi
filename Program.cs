@@ -1,3 +1,4 @@
+using BookStoreApi.Middleware;
 using BookStoreApi.Repositories;
 using BookStoreApi.Services;
 
@@ -13,6 +14,7 @@ builder.Services.AddScoped<IBookService, BookService>();
 
 var app = builder.Build();
 
+app.UseGlobalExceptionHandler();
 app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();

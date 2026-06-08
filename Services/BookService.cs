@@ -41,7 +41,7 @@ public class BookService : IBookService
         var result = _repo.GetByIsbn(isbn);
 
         if (result == null)
-            _logger.LogWarning("Book not found. Isbn={Isbn}", isbn);
+            _logger.LogWarning("Can't find the book.");
 
         return result;
     }
@@ -64,7 +64,7 @@ public class BookService : IBookService
         if (existing == null)
         {
             _logger.LogWarning("Update failed - not found. Isbn={Isbn}", isbn);
-            throw new Exception("Book not found");
+            throw new KeyNotFoundException("Can't find the book");
         }
 
         ApplyUpdate(existing, dto);
@@ -161,21 +161,21 @@ public class BookService : IBookService
     private void Validate(CreateBookDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Isbn))
-            throw new ArgumentException("ISBN required");
+            throw new ArgumentException("ISBN is required");
 
         if (string.IsNullOrWhiteSpace(dto.Title))
-            throw new ArgumentException("Title required");
+            throw new ArgumentException("Title is required");
 
         if (string.IsNullOrWhiteSpace(dto.Category))
-            throw new ArgumentException("Category required");
+            throw new ArgumentException("Category is required");
 
         if (dto.Year <= 0)
-            throw new ArgumentException("Invalid year");
+            throw new ArgumentException("Year must be greater than zero");
 
         if (dto.Price <= 0)
-            throw new ArgumentException("Invalid price");
+            throw new ArgumentException("Price must be greater than zero");
 
         if (dto.Authors == null || !dto.Authors.Any())
-            throw new ArgumentException("At least one author required");
+            throw new ArgumentException("At least one author is required");
     }
 }
