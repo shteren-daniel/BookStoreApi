@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text;
+﻿using System.Text;
 using BookStoreApi.Models;
 using BookStoreApi.Repositories;
 
@@ -27,6 +26,8 @@ public class BookService : IBookService
         _logger.LogInformation("BookService initialized");
     }
 
+    // ---------------- CRUD ----------------
+
     public async Task<List<Book>> GetAll()
     {
         var result = await _repo.GetAllAsync();
@@ -38,23 +39,26 @@ public class BookService : IBookService
 
     public async Task<Book?> GetByIsbn(string isbn)
     {
+        if (string.IsNullOrWhiteSpace(isbn))
+            throw new ArgumentException("ISBN is required");
+
         var result = await _repo.GetByIsbnAsync(isbn);
 
         if (result == null)
-            _logger.LogWarning("Can't find the book. Isbn={Isbn}", isbn);
+            _logger.LogWarning("Book not found. ISBN={Isbn}", isbn);
 
         return result;
     }
 
     public async Task Add(CreateBookDto dto)
     {
-        Validate(dto);
+        // validation handled by FluentValidation pipeline
 
         var book = Map(dto);
 
         await _repo.AddAsync(book);
 
-        _logger.LogInformation("Add completed. Isbn={Isbn}", dto.Isbn);
+        _logger.LogInformation("Add completed. ISBN={Isbn}", dto.Isbn);
     }
 
     public async Task Update(string isbn, UpdateBookDto dto)
@@ -67,8 +71,6 @@ public class BookService : IBookService
         if (existing == null)
             throw new KeyNotFoundException($"Book with ISBN {isbn} not found");
 
-        ValidateUpdate(dto);
-
         ApplyUpdate(existing, dto);
 
         await _repo.UpdateAsync(isbn, existing);
@@ -78,9 +80,12 @@ public class BookService : IBookService
 
     public async Task Delete(string isbn)
     {
+        if (string.IsNullOrWhiteSpace(isbn))
+            throw new ArgumentException("ISBN is required");
+
         await _repo.DeleteAsync(isbn);
 
-        _logger.LogInformation("Delete completed. Isbn={Isbn}", isbn);
+        _logger.LogInformation("Delete completed. ISBN={Isbn}", isbn);
     }
 
     // ---------------- Report ----------------
@@ -142,7 +147,7 @@ public class BookService : IBookService
         if (!string.IsNullOrWhiteSpace(dto.Language))
             book.Language = dto.Language;
 
-        if (dto.Authors != null)
+        if (dto.Authors != null && dto.Authors.Any())
             book.Authors = dto.Authors;
 
         if (!string.IsNullOrWhiteSpace(dto.Category))
@@ -156,46 +161,5 @@ public class BookService : IBookService
 
         if (dto.Cover != null)
             book.Cover = dto.Cover;
-    }
-
-    // ---------------- validation ----------------
-
-    private void Validate(CreateBookDto dto)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Isbn))
-            throw new ArgumentException("ISBN is required");
-
-        if (string.IsNullOrWhiteSpace(dto.Title))
-            throw new ArgumentException("Title is required");
-
-        if (string.IsNullOrWhiteSpace(dto.Category))
-            throw new ArgumentException("Category is required");
-
-        if (dto.Year <= 0)
-            throw new ArgumentException("Year must be greater than zero");
-
-        if (dto.Price <= 0)
-            throw new ArgumentException("Price must be greater than zero");
-
-        if (dto.Authors == null || !dto.Authors.Any())
-            throw new ArgumentException("At least one author is required");
-    }
-
-    private void ValidateUpdate(UpdateBookDto dto)
-    {
-        if (dto == null)
-            throw new ArgumentNullException(nameof(dto));
-
-        if (dto.Year.HasValue && dto.Year <= 0)
-            throw new ArgumentException("Year must be greater than 0");
-
-        if (dto.Year.HasValue && (dto.Year < 1000 || dto.Year > 2500))
-            throw new ValidationException("Year must be between 1000 and 2500");
-
-        if (dto.Price.HasValue && dto.Price <= 0)
-            throw new ArgumentException("Price must be greater than 0");
-
-        if (dto.Authors != null && dto.Authors.Any(a => string.IsNullOrWhiteSpace(a)))
-            throw new ArgumentException("Author names cannot be empty");
     }
 }
