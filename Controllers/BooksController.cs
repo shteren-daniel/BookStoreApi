@@ -44,7 +44,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpPost("Add")]
-    public IActionResult Add([FromBody] Book book)
+    public IActionResult Add([FromBody] CreateBookDto book)
     {
         if (!ModelState.IsValid)
         {
@@ -58,7 +58,7 @@ public class BooksController : ControllerBase
     }
 
     [HttpPut("Update{isbn}")]
-    public IActionResult Update(string isbn, [FromBody] UpdateBook book)
+    public IActionResult Update(string isbn, [FromBody] UpdateBookDto book)
     {
         _service.Update(isbn, book);
         _logger.LogInformation("Update completed. ISBN: {Isbn}", isbn);

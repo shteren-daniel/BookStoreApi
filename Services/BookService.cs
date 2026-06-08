@@ -44,28 +44,28 @@ public class BookService : IBookService
         return book;
     }
 
-    public void Add(Book book)
+    public void Add(CreateBookDto dto)
     {
-        ValidateBook(book);
+        ValidateBook(dto);
 
         lock (_lock)
         {
             var doc = LoadXml();
             if (doc.Descendants("book")
-                .Any(b => b.Element("isbn")?.Value == book.Isbn))
+                .Any(b => b.Element("isbn")?.Value == dto.Isbn))
             {
-                _logger.LogWarning("Duplicate ISBN detected. Isbn={Isbn}", book.Isbn);
+                _logger.LogWarning("Duplicate ISBN detected. Isbn={Isbn}", dto.Isbn);
                 throw new Exception("Book already exists");
             }
 
-            doc.Root!.Add(BuildXml(book));
+            doc.Root!.Add(BuildXml(dto));
             doc.Save(_filePath);
 
-            _logger.LogInformation("Add completed. Isbn={Isbn}", book.Isbn);
+            _logger.LogInformation("Add completed. Isbn={Isbn}", dto.Isbn);
         }
     }
 
-    public void Update(string isbn, UpdateBook updated)
+    public void Update(string isbn, UpdateBookDto updated)
     {
         lock (_lock)
         {
@@ -176,7 +176,7 @@ public class BookService : IBookService
         return XDocument.Load(_filePath);
     }
 
-    private XElement BuildXml(Book book)
+    private XElement BuildXml(CreateBookDto book)
     {
         var element = new XElement("book",
             new XAttribute("category", book.Category));
@@ -212,7 +212,7 @@ public class BookService : IBookService
         };
     }
 
-    private void ValidateBook(Book book)
+    private void ValidateBook(CreateBookDto book)
     {
         if (book == null)
         {

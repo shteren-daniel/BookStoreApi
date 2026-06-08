@@ -1,4 +1,6 @@
-﻿public class UpdateBook
+﻿namespace BookStoreApi.Models;
+
+public class UpdateBookDto
 {
     public string? Title { get; set; }
     public string? Language { get; set; }
