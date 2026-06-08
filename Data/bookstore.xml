@@ -22,7 +22,7 @@
     <isbn>9051234567897</isbn>
     <title lang="en">Harry Potter</title>
     <author>J K. Rowling</author>
-    <year>2000</year>
-    <price>29.99</price>
+    <year>4500</year>
+    <price>123.45</price>
   </book>
 </bookstore>

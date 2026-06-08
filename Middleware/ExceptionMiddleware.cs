@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BookStoreApi.Middleware;
 
@@ -31,10 +32,11 @@ public class ExceptionMiddleware
     {
         var (statusCode, message) = MapException(exception);
 
-        var response = new
+        var response = new ProblemDetails
         {
-            error = message,
-            status = statusCode
+            Title = "Error occurred",
+            Detail = exception.Message,
+            Status = statusCode
         };
 
         context.Response.ContentType = "application/json";

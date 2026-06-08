@@ -17,67 +17,75 @@ public class BooksController : ControllerBase
         _logger = logger;
     }
 
-    [HttpGet("GetAll")]
-    public IActionResult GetAll()
+    [HttpGet("get-all")]
+    public async Task<IActionResult> GetAll()
     {
-        var result = _service.GetAll();
+        var result = await _service.GetAll();
 
-        _logger.LogInformation("GetAll completed. Count: {Count}", result.Count);
+        _logger.LogInformation("GetAll completed. Count={Count}", result.Count);
 
         return Ok(result);
     }
 
-    [HttpGet("GetByIsbn{isbn}")]
-    public IActionResult GetByIsbn(string isbn)
+    [HttpGet("get-by-isbn/{isbn}")]
+    public async Task<IActionResult> GetByIsbn(string isbn)
     {
-        var book = _service.GetByIsbn(isbn);
+        var book = await _service.GetByIsbn(isbn);
 
         if (book == null)
         {
-            _logger.LogWarning("Book not found. ISBN: {Isbn}", isbn);
+            _logger.LogWarning("Book not found. ISBN={Isbn}", isbn);
             return NotFound($"Book with ISBN {isbn} not found");
         }
 
-        _logger.LogInformation("GetByIsbn successful. ISBN: {Isbn}", isbn);
+        _logger.LogInformation("GetByIsbn successful. ISBN={Isbn}", isbn);
 
         return Ok(book);
     }
 
-    [HttpPost("Add")]
-    public IActionResult Add([FromBody] CreateBookDto book)
+
+    [HttpPost("add")]
+    public async Task<IActionResult> Add([FromBody] CreateBookDto book)
     {
         if (!ModelState.IsValid)
         {
-            _logger.LogWarning("Add book failed due to invalid model state");
+            _logger.LogWarning("Add failed - invalid model state");
             return BadRequest(ModelState);
         }
 
-        _service.Add(book);
-        _logger.LogInformation("Book added successfully. ISBN: {Isbn}", book.Isbn);
+        await _service.Add(book);
+
+        _logger.LogInformation("Book added successfully. ISBN={Isbn}", book.Isbn);
+
         return CreatedAtAction(nameof(GetByIsbn), new { isbn = book.Isbn }, book);
     }
 
-    [HttpPut("Update{isbn}")]
-    public IActionResult Update(string isbn, [FromBody] UpdateBookDto book)
+    [HttpPut("update/{isbn}")]
+    public async Task<IActionResult> Update(string isbn, [FromBody] UpdateBookDto book)
     {
-        _service.Update(isbn, book);
-        _logger.LogInformation("Update completed. ISBN: {Isbn}", isbn);
+        await _service.Update(isbn, book);
+
+        _logger.LogInformation("Update completed. ISBN={Isbn}", isbn);
+
         return NoContent();
     }
 
-    [HttpDelete("Delete{isbn}")]
-    public IActionResult Delete(string isbn)
+    [HttpDelete("delete/{isbn}")]
+    public async Task<IActionResult> Delete(string isbn)
     {
-        _service.Delete(isbn);
-        _logger.LogInformation("Delete completed. ISBN: {Isbn}", isbn);
+        await _service.Delete(isbn);
+
+        _logger.LogInformation("Delete completed. ISBN={Isbn}", isbn);
+
         return NoContent();
     }
 
-    [HttpGet("booksReport")]
-    public IActionResult GetHtmlReport()
+
+    [HttpGet("report")]
+    public async Task<IActionResult> GetHtmlReport()
     {
-        var html = _service.GenerateHtmlReport();
-        _logger.LogInformation("HTML report generated successfully");
+        var html = await _service.GenerateHtmlReport();
+
         return Content(html, "text/html");
     }
 }

@@ -13,79 +13,92 @@ public class BookRepository : IBookRepository
         _filePath = Path.Combine(env.ContentRootPath, configuration["BooksFilePath"]!);
     }
 
-    public List<Book> GetAll()
+    public async Task<List<Book>> GetAllAsync()
     {
-        var doc = LoadXml();
-
-        return doc.Descendants("book")
-            .Select(MapToBook)
-            .ToList();
-    }
-
-    public Book? GetByIsbn(string isbn)
-    {
-        return GetAll().FirstOrDefault(x => x.Isbn == isbn);
-    }
-
-    public void Add(Book book)
-    {
-        lock (_lock)
+        return await Task.Run(() =>
         {
             var doc = LoadXml();
 
-            if (doc.Descendants("book")
-                .Any(b => b.Element("isbn")?.Value == book.Isbn))
-            {
-                throw new InvalidOperationException(
-                    $"Book with ISBN '{book.Isbn}' already exists");
-            }
-
-            doc.Root!.Add(BuildXml(book));
-            doc.Save(_filePath);
-        }
+            return doc.Descendants("book")
+                .Select(MapToBook)
+                .ToList();
+        });
     }
 
-    public void Update(string isbn, Book updated)
+    public async Task<Book?> GetByIsbnAsync(string isbn)
     {
-        lock (_lock)
-        {
-            var doc = LoadXml();
-
-            var existing = doc.Descendants("book")
-                .FirstOrDefault(b => b.Element("isbn")?.Value == isbn);
-
-            if (existing == null)
-            {
-                throw new KeyNotFoundException(
-                    $"Book with ISBN '{isbn}' was not found");
-            }
-
-            existing.Remove();
-            doc.Root!.Add(BuildXml(updated));
-
-            doc.Save(_filePath);
-        }
+        var books = await GetAllAsync();
+        return books.FirstOrDefault(x => x.Isbn == isbn);
     }
 
-    public void Delete(string isbn)
+    public async Task AddAsync(Book book)
     {
-        lock (_lock)
+        await Task.Run(() =>
         {
-            var doc = LoadXml();
-
-            var book = doc.Descendants("book")
-                .FirstOrDefault(x => x.Element("isbn")?.Value == isbn);
-
-            if (book == null)
+            lock (_lock)
             {
-                throw new KeyNotFoundException(
-                    $"Book with ISBN '{isbn}' was not found");
+                var doc = LoadXml();
+
+                if (doc.Descendants("book")
+                    .Any(b => b.Element("isbn")?.Value == book.Isbn))
+                {
+                    throw new InvalidOperationException(
+                        $"Book with ISBN '{book.Isbn}' already exists");
+                }
+
+                doc.Root!.Add(BuildXml(book));
+                doc.Save(_filePath);
             }
+        });
+    }
 
-            book.Remove();
+    public async Task UpdateAsync(string isbn, Book updated)
+    {
+        await Task.Run(() =>
+        {
+            lock (_lock)
+            {
+                var doc = LoadXml();
 
-            doc.Save(_filePath);
-        }
+                var existing = doc.Descendants("book")
+                    .FirstOrDefault(b => b.Element("isbn")?.Value == isbn);
+
+                if (existing == null)
+                {
+                    throw new KeyNotFoundException(
+                        $"Book with ISBN '{isbn}' was not found");
+                }
+
+                existing.Remove();
+                doc.Root!.Add(BuildXml(updated));
+
+                doc.Save(_filePath);
+            }
+        });
+    }
+
+    public async Task DeleteAsync(string isbn)
+    {
+        await Task.Run(() =>
+        {
+            lock (_lock)
+            {
+                var doc = LoadXml();
+
+                var book = doc.Descendants("book")
+                    .FirstOrDefault(x => x.Element("isbn")?.Value == isbn);
+
+                if (book == null)
+                {
+                    throw new KeyNotFoundException(
+                        $"Book with ISBN '{isbn}' was not found");
+                }
+
+                book.Remove();
+
+                doc.Save(_filePath);
+            }
+        });
     }
 
     // ---------------- helpers ----------------
@@ -93,11 +106,7 @@ public class BookRepository : IBookRepository
     private XDocument LoadXml()
     {
         if (!File.Exists(_filePath))
-        {
-            throw new FileNotFoundException(
-                "XML file not found",
-                _filePath);
-        }
+            throw new FileNotFoundException("XML file not found", _filePath);
 
         return XDocument.Load(_filePath);
     }

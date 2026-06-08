@@ -4,10 +4,10 @@ namespace BookStoreApi.Services;
 
 public interface IBookService
 {
-    List<Book> GetAll();
-    Book? GetByIsbn(string isbn);
-    void Add(CreateBookDto book);
-    void Update(string isbn, UpdateBookDto book);
-    void Delete(string isbn);
-    string GenerateHtmlReport();
+    Task<List<Book>> GetAll();
+    Task<Book?> GetByIsbn(string isbn);
+    Task Add(CreateBookDto book);
+    Task Update(string isbn, UpdateBookDto book);
+    Task Delete(string isbn);
+    Task<string> GenerateHtmlReport();
 }
